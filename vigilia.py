@@ -35,7 +35,7 @@ for user_disp in users_disp:
         'fim': float(fim)
     })
 
-PASSO = 0.5
+PASSO = 1
 DIAS = ['dom', 'seg', 'ter', 'qua', 'qui', 'sex', 'sab']
 
 def horarios(inicio, fim, passo):
@@ -50,10 +50,7 @@ def horarios(inicio, fim, passo):
 def cria_registro(disp):
     registro = {}
     for pessoa in disp:
-        registro[pessoa["nome"]] = {
-            "horas": 0, 
-            "dias": set()
-        }
+        registro[pessoa["nome"]] = {}
     return registro
 
 
@@ -70,12 +67,12 @@ def esta_disponivel(pessoa, dia, hora):
 
 def maximo_horas(pessoa, registro):
     reg_pessoa = registro[pessoa["nome"]]
-    return reg_pessoa["horas"] <= pessoa["maximo_horas"]
+    return all(horas <= pessoa["maximo_horas"] for horas in reg_pessoa.values())
 
 
 def maximo_dias(pessoa, registro):
     reg_pessoa = registro[pessoa["nome"]]
-    return len(reg_pessoa["dias"]) <= pessoa["maximo_dias"]
+    return len(reg_pessoa.keys()) <= pessoa["maximo_dias"]
 
 
 def respeita_requisitos(pessoa, reqs, registro):
@@ -95,16 +92,22 @@ def escala(inicio, fim, disp, reqs):
             for pessoa in disp:
                 nome = pessoa["nome"]
                 registro_tmp = copy.deepcopy(registro)
-                registro_tmp[nome]["horas"] += PASSO
-                registro_tmp[nome]["dias"].add(dia)
+                if dia not in registro_tmp[nome].keys(): registro_tmp[nome][dia] = 0
+                registro_tmp[nome][dia] += PASSO
                 if esta_disponivel(pessoa, dia, hora) and respeita_requisitos(pessoa, reqs, registro_tmp):
                     escala[dia][str(hora)].append(nome)
                     registro = registro_tmp
     return escala
 
 
+INICIO = 13
+FIM = 17
 
-res_escala = escala(8, 17, list(disponibilidade.values()), [maximo_horas, maximo_dias])
-file = open('./result.json', 'w')
-file.write(json.dumps(res_escala, indent=2))
-file.close()
+res_escala = escala(INICIO, FIM, list(disponibilidade.values()), [maximo_horas, maximo_dias])
+
+for dia in res_escala.keys():
+    print(dia)
+    for hora in res_escala[dia].keys():
+        participantes = ', '.join(res_escala[dia][hora])
+        print(f'{hora} - {participantes}')
+    print(' ')
